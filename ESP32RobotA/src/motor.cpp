@@ -1,23 +1,55 @@
-#include "motor.h"
+#include <motor.h>
+#include <Arduino.h>
 
 // Constructor
-Motor::Motor(int initSpeed, int initDirection) 
-    : speed(initSpeed), direction(initDirection) {}
+Motor::Motor(int pin1, int pin2, int pwmChannel1, int pwmChannel2, int pwmResolution, int pwmFreq, int initSpeed) 
+    : pwmPin1(pin1), pwmPin2(pin2), pwmChannel1(pwmChannel1), pwmChannel2(pwmChannel2), pwmResolution(pwmResolution), pwmFreq(pwmFreq), speed(initSpeed){
+
+    ledcSetup(pwmChannel1, pwmFreq, pwmResolution);
+    ledcAttachPin(pwmPin1, pwmChannel1);
+
+    ledcSetup(pwmChannel2, pwmFreq, pwmResolution);
+    ledcAttachPin(pwmPin2, pwmChannel2);  
+        
+    }
 
 // Setter methods
 void Motor::setSpeed(int newSpeed) {
     speed = newSpeed;
+    if (speed>=0){
+        Serial.println(speed);
+        ledcWrite(pwmChannel1, speed);
+        ledcWrite(pwmChannel2, 0);
+    }
+    else{
+        Serial.println(-speed);
+        ledcWrite(pwmChannel1, 0);
+        ledcWrite(pwmChannel2, -speed);
+    }
+    Serial.println("Motor Speed updated to: " + String(newSpeed));
 }
 
-void Motor::setDirection(int newDirection) {
-    direction = newDirection;
+void Motor::setFreq(int newFreq) {
+    // Reconfigure the PWM with the new frequency without attaching pins again
+    if (ledcSetup(pwmChannel1, newFreq, pwmResolution) == 0) {
+        Serial.println("Failed to set new PWM frequency on Channel 1. Check the frequency value and channel availability.");
+        return;
+    }
+
+    if (ledcSetup(pwmChannel2, newFreq, pwmResolution) == 0) {
+        Serial.println("Failed to set new PWM frequency on Channel 2. Check the frequency value and channel availability.");
+        return;
+    }
+
+    Serial.println("PWM frequency updated to: " + String(newFreq));
 }
+
 
 // Getter methods
 int Motor::getSpeed() const {
     return speed;
 }
 
-int Motor::getDirection() const {
-    return direction;
+int Motor::getFreq() const {
+    return pwmFreq;
 }

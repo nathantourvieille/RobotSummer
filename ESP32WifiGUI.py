@@ -3,7 +3,7 @@ from tkinter import scrolledtext
 import requests
 
 # Replace with your ESP32 IP address and port
-ESP32_IP = "206.12.161.107:8000"
+ESP32_IP = "206.12.161.135:8000"
 
 class ESP32GUI:
     def __init__(self, root):
@@ -11,52 +11,124 @@ class ESP32GUI:
         self.root.title("ESP32 Communication")
 
         # Create a Label to display the title
-        self.output_label = tk.Label(root, text="ESP32 Communication", anchor='center')
-        self.output_label.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
+        self.wifi_status_label = tk.Label(root, text="Connection Status", anchor='center')
+        self.wifi_status_label.grid(row=0, column=0, padx=10, pady=10)
+        self.wifi_status = tk.Label(root, text="Waiting...", anchor='center')
+        self.wifi_status.grid(row=1, column=0, padx=10, pady=10)
 
         # Create a ScrolledText widget for the output display
+        self.output_box_label = tk.Label(root, text = "ESP32 Communication")
+        self.output_box_label.grid(row=0, column = 1, padx=10, pady=10)
         self.output_box = scrolledtext.ScrolledText(root, wrap=tk.WORD, width=50, height=15)
-        self.output_box.grid(row=0, column=1, padx=10, pady=10, sticky="nsew")
+        self.output_box.grid(row=1, column=1, padx=10, pady=10, sticky="nsew")
 
         # Create an Entry widget for data input
         self.entry = tk.Entry(root, width=40)
-        self.entry.grid(row=1, column=0, padx=10, pady=10, sticky="ew")
+        self.entry.grid(row=3, column=0, padx=10, pady=10, sticky="ew")
 
         # Create a Button to send data
         self.send_button = tk.Button(root, text="Send", command=self.send_data)
-        self.send_button.grid(row=1, column=1, padx=10, pady=10)
+        self.send_button.grid(row=3, column=1, padx=10, pady=10)
 
-        self.entry.bind("<Return>", self.send_data)
+        self.entry.bind("<Return>", lambda event: self.send_data())
 
-        # Configure grid weights
-        root.grid_columnconfigure(0, weight=1)  # Column 0 has weight 1
-        root.grid_columnconfigure(1, weight=100)  # Column 1 has weight 2
-        root.grid_rowconfigure(1, weight=1)
+        self.speed_sliderA = tk.Scale(root, from_=-255, to=255, orient=tk.HORIZONTAL, label="Motor SpeedA", command=self.update_speedA)
+        self.speed_sliderA.grid(row=4, column=0, columnspan=2, padx=10, pady=10, sticky="ew")
+
+        self.speed_sliderB = tk.Scale(root, from_=-255, to=255, orient=tk.HORIZONTAL, label="Motor SpeedB", command=self.update_speedB)
+        self.speed_sliderB.grid(row=5, column=0, columnspan=2, padx=10, pady=10, sticky="ew")
+        
+        self.root.bind("<w>", self.decrease_speed)
+        self.root.bind("<s>", self.increase_speed)
+
+
+
 
         # Start the display update loop
         self.update_display()
 
-        root.grid_columnconfigure(0, weight=2)
+        root.grid_rowconfigure(0, weight=1)
+        root.grid_rowconfigure(1, weight=4)
+        root.grid_rowconfigure(3, weight=0)
+        root.grid_columnconfigure(0, weight=1)
         root.grid_columnconfigure(1, weight=2)
-        root.grid_rowconfigure(1, weight=1)
 
-    def send_data(self, event=None):
-        message = self.entry.get()
-        url = f"http://{ESP32_IP}/post"
+    def send_data(self):
+        # Split the input into endpoint and data
+        input_text = self.entry.get()
+        parts = input_text.split(' ', 1)
+        if len(parts) == 2:
+            endpoint, message = parts
+        else:
+            endpoint = parts[0]
+            message = ""
+
+        url = f"http://{ESP32_IP}{endpoint}"
         data = {'message': message}
         try:
-            response = requests.post(url, data=data)
-            self.output_box.insert(tk.END, f"Sent: {message}\n")
+            if "get" in endpoint:
+                response = requests.get(url, data=data)
+            else:
+                response = requests.post(url, data=data)
+
+            self.output_box.insert(tk.END, f"Sent to {url} with message {message}\n")
             self.output_box.insert(tk.END, f"Response: {response.status_code} {response.reason}\n")
             self.output_box.insert(tk.END, f"Message: {response.text}\n")
+            self.output_box.insert(tk.END, "\n")
         except Exception as e:
             self.output_box.insert(tk.END, f"Error: {e}\n")
+            self.output_box.insert(tk.END, "\n")
         self.entry.delete(0, tk.END)
 
-    def update_display(self):
-        # Placeholder for constantly updating data
-        self.output_label.config(text = "Updating display...\n")
-        self.root.after(5000, self.update_display)  # Update every 5 seconds
+
+    def update_display(self):  
+        print("Updating WiFi Status")
+        url = f"http://{ESP32_IP}/wifistatus"
+        try: 
+            response = requests.get(url)
+            self.wifi_status.config(text = response.text)
+        except Exception as e:
+            self.wifi_status.config(text = f"Error: {e}\n\n")
+        self.root.after(20000, self.update_display)  # Update every 20 seconds
+
+    def update_speedA(self, value):
+        url = f"http://{ESP32_IP}/speedA"
+        data = {'message': value}
+        try:
+            response = requests.post(url, data=data)
+            self.output_box.insert(tk.END, f"Set motor speed to {value}\n")
+            self.output_box.insert(tk.END, f"Response: {response.status_code} {response.reason}\n")
+            self.output_box.insert(tk.END, f"Message: {response.text}\n")
+            self.output_box.insert(tk.END, "\n")
+            self.output_box.see(tk.END)
+        except Exception as e:
+            self.output_box.insert(tk.END, f"Error: {e}\n")
+            self.output_box.insert(tk.END, "\n")
+            self.output_box.see(tk.END)
+
+    def update_speedB(self, value):
+        url = f"http://{ESP32_IP}/speedB"
+        data = {'message': value}
+        try:
+            response = requests.post(url, data=data)
+            self.output_box.insert(tk.END, f"Set motor speed to {value}\n")
+            self.output_box.insert(tk.END, f"Response: {response.status_code} {response.reason}\n")
+            self.output_box.insert(tk.END, f"Message: {response.text}\n")
+            self.output_box.insert(tk.END, "\n")
+            self.output_box.see(tk.END)
+        except Exception as e:
+            self.output_box.insert(tk.END, f"Error: {e}\n")
+            self.output_box.insert(tk.END, "\n")
+            self.output_box.see(tk.END)
+
+    def decrease_speed(self, event):
+        self.speed_sliderA.set(self.speed_sliderA.get() - 20)
+        self.speed_sliderB.set(self.speed_sliderB.get() - 20)
+
+    def increase_speed(self, event):
+        self.speed_sliderA.set(self.speed_sliderA.get() + 20)
+        self.speed_sliderB.set(self.speed_sliderB.get() + 20)
+
 
 if __name__ == "__main__":
     root = tk.Tk()

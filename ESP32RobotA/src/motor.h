@@ -3,20 +3,25 @@
 
 class Motor {
 private:
-    int speed;      // Speed of the motor
-    int direction;  // Direction of the motor (1 or 0)
+    int speed;      // Speed of the motor -255 to 255
+    const int pwmPin1;
+    const int pwmPin2;
+    const int pwmChannel1;
+    const int pwmChannel2;
+    const int pwmResolution;
+    const int pwmFreq;
 
 public:
     // Constructor
-    Motor(int initSpeed = 0, int initDirection = 0);
+    Motor(int pwmpin1, int pwmpin2, int pwmChannel1, int pwmChannel2, int pwmResolution = 8, int pwmFreq = 300, int initSpeed = 0);
 
     // Setter methods
     void setSpeed(int newSpeed);
-    void setDirection(int newDirection);
+    void setFreq(int newFreq);
 
     // Getter methods
     int getSpeed() const;
-    int getDirection() const;
+    int getFreq() const;
 };
 
 #endif // MOTOR_H
