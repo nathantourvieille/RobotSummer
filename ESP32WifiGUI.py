@@ -3,7 +3,8 @@ from tkinter import scrolledtext
 import requests
 
 # Replace with your ESP32 IP address and port
-ESP32_IP = "206.12.161.135:8000"
+ESP32_IP = "206.12.167.135:8000"
+SPEED_STEP = 5  # Amount by which speed changes when using arrow keys
 
 class ESP32GUI:
     def __init__(self, root):
@@ -13,12 +14,12 @@ class ESP32GUI:
         # Create a Label to display the title
         self.wifi_status_label = tk.Label(root, text="Connection Status", anchor='center')
         self.wifi_status_label.grid(row=0, column=0, padx=10, pady=10)
-        self.wifi_status = tk.Label(root, text="Waiting...", anchor='center')
+        self.wifi_status = tk.Label(root, text="peepee...", anchor='center')
         self.wifi_status.grid(row=1, column=0, padx=10, pady=10)
 
         # Create a ScrolledText widget for the output display
-        self.output_box_label = tk.Label(root, text = "ESP32 Communication")
-        self.output_box_label.grid(row=0, column = 1, padx=10, pady=10)
+        self.output_box_label = tk.Label(root, text="ESP32 Communication")
+        self.output_box_label.grid(row=0, column=1, padx=10, pady=10)
         self.output_box = scrolledtext.ScrolledText(root, wrap=tk.WORD, width=50, height=15)
         self.output_box.grid(row=1, column=1, padx=10, pady=10, sticky="nsew")
 
@@ -32,20 +33,22 @@ class ESP32GUI:
 
         self.entry.bind("<Return>", lambda event: self.send_data())
 
-        self.speed_sliderA = tk.Scale(root, from_=-255, to=255, orient=tk.HORIZONTAL, label="Motor SpeedA", command=self.update_speedA)
+        self.speed_sliderA = tk.Scale(root, from_=-255, to=255, orient=tk.HORIZONTAL, label="Default Speed", command=self.update_speedA)
         self.speed_sliderA.grid(row=4, column=0, columnspan=2, padx=10, pady=10, sticky="ew")
 
-        self.speed_sliderB = tk.Scale(root, from_=-255, to=255, orient=tk.HORIZONTAL, label="Motor SpeedB", command=self.update_speedB)
-        self.speed_sliderB.grid(row=5, column=0, columnspan=2, padx=10, pady=10, sticky="ew")
-        
-        self.root.bind("<w>", self.decrease_speed)
-        self.root.bind("<s>", self.increase_speed)
+        #self.speed_sliderB = tk.Scale(root, from_=-255, to=255, orient=tk.HORIZONTAL, label="Motor SpeedB", command=self.update_speedB)
+        #self.speed_sliderB.grid(row=5, column=0, columnspan=2, padx=10, pady=10, sticky="ew")
 
+        self.root.bind("<Up>", self.increase_speed)
+        self.root.bind("<Down>", self.decrease_speed)
+        self.root.bind("<Left>", self.steer_left)
+        self.root.bind("<Right>", self.steer_right)
 
-
-
-        # Start the display update loop
         self.update_display()
+
+        # Initial speeds for motors
+        self.speedA = 0
+        self.speedB = 0
 
         root.grid_rowconfigure(0, weight=1)
         root.grid_rowconfigure(1, weight=4)
@@ -80,17 +83,6 @@ class ESP32GUI:
             self.output_box.insert(tk.END, "\n")
         self.entry.delete(0, tk.END)
 
-
-    def update_display(self):  
-        print("Updating WiFi Status")
-        url = f"http://{ESP32_IP}/wifistatus"
-        try: 
-            response = requests.get(url)
-            self.wifi_status.config(text = response.text)
-        except Exception as e:
-            self.wifi_status.config(text = f"Error: {e}\n\n")
-        self.root.after(20000, self.update_display)  # Update every 20 seconds
-
     def update_speedA(self, value):
         url = f"http://{ESP32_IP}/speedA"
         data = {'message': value}
@@ -122,13 +114,50 @@ class ESP32GUI:
             self.output_box.see(tk.END)
 
     def decrease_speed(self, event):
-        self.speed_sliderA.set(self.speed_sliderA.get() - 20)
-        self.speed_sliderB.set(self.speed_sliderB.get() - 20)
+        self.speedA = self.speed_sliderA.get() - SPEED_STEP
+        self.speedB = self.speed_sliderB.get() - SPEED_STEP
+        self.speed_sliderA.set(self.speedA)
+        self.speed_sliderB.set(self.speedB)
+        self.update_speedA(self.speedA)
+        self.update_speedB(self.speedB)
 
     def increase_speed(self, event):
-        self.speed_sliderA.set(self.speed_sliderA.get() + 20)
-        self.speed_sliderB.set(self.speed_sliderB.get() + 20)
+        self.speedA = self.speed_sliderA.get() + SPEED_STEP
+        self.speedB = self.speed_sliderB.get() + SPEED_STEP
+        self.speed_sliderA.set(self.speedA)
+        self.speed_sliderB.set(self.speedB)
+        self.update_speedA(self.speedA)
+        self.update_speedB(self.speedB)
 
+    def steer_left(self, event):
+        self.speedA = self.speed_sliderA.get() + SPEED_STEP
+        self.speedB = self.speed_sliderB.get() - SPEED_STEP
+        self.speedA = min(max(self.speedA, -255), 255)  # Clamp to -255 to 255
+        self.speedB = min(max(self.speedB, -255), 255)  # Clamp to -255 to 255
+        self.speed_sliderA.set(self.speedA)
+        self.speed_sliderB.set(self.speedB)
+        self.update_speedA(self.speedA)
+        self.update_speedB(self.speedB)
+
+    def steer_right(self, event):
+        self.speedA = self.speed_sliderA.get() - SPEED_STEP
+        self.speedB = self.speed_sliderB.get() + SPEED_STEP
+        self.speedA = min(max(self.speedA, -255), 255)  # Clamp to -255 to 255
+        self.speedB = min(max(self.speedB, -255), 255)  # Clamp to -255 to 255
+        self.speed_sliderA.set(self.speedA)
+        self.speed_sliderB.set(self.speedB)
+        self.update_speedA(self.speedA)
+        self.update_speedB(self.speedB)
+
+
+    def update_display(self):
+        url = f"http://{ESP32_IP}/getTCRT"
+        try:
+            response = requests.get(url)
+            self.wifi_status.config(text=response.text)
+        except Exception as e:
+            self.wifi_status.config(text=f"Error: {e}\n\n")
+        self.root.after(100, self.update_display)  # Update every 1 second
 
 if __name__ == "__main__":
     root = tk.Tk()
