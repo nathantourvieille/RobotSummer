@@ -3,7 +3,7 @@ from tkinter import scrolledtext
 import requests
 
 # Replace with your ESP32 IP address and port
-ESP32_IP = "206.12.166.131:8000"
+ESP32_IP = "192.168.137.120:8000"
 SPEED_STEP = 5  # Amount by which speed changes when using arrow keys
 
 class ESP32GUI:
@@ -16,6 +16,11 @@ class ESP32GUI:
         self.wifi_status_label.grid(row=0, column=0, padx=10, pady=10)
         self.wifi_status = tk.Label(root, text="peepee...", anchor='center')
         self.wifi_status.grid(row=1, column=0, padx=10, pady=10)
+
+        self.tcrt_status_label = tk.Label(root, text="Connection Status", anchor='center')
+        self.tcrt_status_label.grid(row=0, column=2, padx=10, pady=10)
+        self.tcrt_status = tk.Label(root, text="peepee...", anchor='center')
+        self.tcrt_status.grid(row=1, column=2, padx=10, pady=10)
 
         # Create a ScrolledText widget for the output display
         self.output_box_label = tk.Label(root, text="ESP32 Communication")
@@ -157,7 +162,7 @@ class ESP32GUI:
             self.wifi_status.config(text=response.text)
         except Exception as e:
             self.wifi_status.config(text=f"Error: {e}\n\n")
-        self.root.after(100, self.update_display)  # Update every 1 second
+        self.root.after(500, self.update_display)  # Update every 1 secons
 
 if __name__ == "__main__":
     root = tk.Tk()

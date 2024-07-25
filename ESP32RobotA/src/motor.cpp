@@ -20,8 +20,8 @@ void Motor::setSpeed(int newSpeed) {
     speed = newSpeed;
     if (speed>=0){
         //Serial.println(speed);
-        ledcWrite(pwmChannel1, speed);
         ledcWrite(pwmChannel2, 0);
+        ledcWrite(pwmChannel1, speed);
     }
     else{
         //Serial.println(-speed);

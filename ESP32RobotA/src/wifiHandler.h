@@ -4,7 +4,7 @@
 #include <ESPAsyncWebServer.h>
 
 
-void setupWiFi(const char* ssid, const char* username, const char* password);
+void setupWiFi(const char* ssid);
 void connectToWiFi(const char* ssid);
 //void setupEndpoints(); 
 String getWiFiStatus();

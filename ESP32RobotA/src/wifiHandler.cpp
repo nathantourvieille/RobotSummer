@@ -2,15 +2,15 @@
 #include <WiFi.h>
 #include <esp_wpa2.h>
 
-void setupWiFi(const char* ssid, const char* username, const char* password){
+void setupWiFi(const char* ssid){
     // Configure Wi-Fi
     WiFi.disconnect(true);
     WiFi.mode(WIFI_STA);
     // Configure WPA2-Enterprise
-    esp_wifi_sta_wpa2_ent_set_identity((uint8_t *)username, strlen(username));
-    esp_wifi_sta_wpa2_ent_set_username((uint8_t *)username, strlen(username));
-    esp_wifi_sta_wpa2_ent_set_password((uint8_t *)password, strlen(password));
-    esp_wifi_sta_wpa2_ent_enable();
+    //esp_wifi_sta_wpa2_ent_set_identity((uint8_t *)username, strlen(username));
+    //esp_wifi_sta_wpa2_ent_set_username((uint8_t *)username, strlen(username));
+    //esp_wifi_sta_wpa2_ent_set_password((uint8_t *)password, strlen(password));
+    //esp_wifi_sta_wpa2_ent_enable();
     connectToWiFi(ssid);
 }
 
@@ -18,7 +18,9 @@ void connectToWiFi(const char* ssid) {
     Serial.print("Connecting to ");
     Serial.println(ssid);
   
-    WiFi.begin(ssid);
+    //WiFi.begin(ssid);
+    //WiFi.begin("BRIANNAGOPAUL", "12345678"); 
+    WiFi.begin("nate1234", "nate1234");
     int retryCount = 0;
     while (WiFi.status() != WL_CONNECTED && retryCount < 15) {
         delay(1000);
