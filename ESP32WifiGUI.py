@@ -3,7 +3,7 @@ from tkinter import scrolledtext
 import requests
 
 # Replace with your ESP32 IP address and port
-ESP32_IP = "192.168.137.120:8000"
+ESP32_IP = "172.20.10.5:8000"
 SPEED_STEP = 5  # Amount by which speed changes when using arrow keys
 
 class ESP32GUI:
@@ -44,10 +44,10 @@ class ESP32GUI:
         self.speed_sliderB = tk.Scale(root, from_=-255, to=255, orient=tk.HORIZONTAL, label="Motor SpeedB", command=self.update_speedB)
         self.speed_sliderB.grid(row=5, column=0, columnspan=2, padx=10, pady=10, sticky="ew")
 
-        self.root.bind("<Up>", self.increase_speed)
-        self.root.bind("<Down>", self.decrease_speed)
-        self.root.bind("<Left>", self.steer_left)
-        self.root.bind("<Right>", self.steer_right)
+        #self.root.bind("<Up>", self.increase_speed)
+        #self.root.bind("<Down>", self.decrease_speed)
+        #self.root.bind("<Left>", self.steer_left)
+        #self.root.bind("<Right>", self.steer_right)
 
         self.update_display()
 
@@ -89,7 +89,7 @@ class ESP32GUI:
         self.entry.delete(0, tk.END)
 
     def update_speedA(self, value):
-        url = f"http://{ESP32_IP}/setdefaultspeed"
+        url = f"http://{ESP32_IP}/defaultspeed"
         data = {'message': value}
         try:
             response = requests.post(url, data=data)

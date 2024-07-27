@@ -19,8 +19,8 @@ void connectToWiFi(const char* ssid) {
     Serial.println(ssid);
   
     //WiFi.begin(ssid);
-    //WiFi.begin("BRIANNAGOPAUL", "12345678"); 
-    WiFi.begin("nate1234", "nate1234");
+    WiFi.begin("Ella iPhone SE", "12345678"); 
+    //WiFi.begin("nate1234", "nate1234");
     int retryCount = 0;
     while (WiFi.status() != WL_CONNECTED && retryCount < 15) {
         delay(1000);

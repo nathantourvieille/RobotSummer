@@ -13,7 +13,7 @@ private:
 
 public:
     // Constructor
-    Motor(int pwmpin1, int pwmpin2, int pwmChannel1, int pwmChannel2, int pwmResolution = 8, int pwmFreq = 300, int initSpeed = 0);
+    Motor(int pwmpin1, int pwmpin2, int pwmChannel1, int pwmChannel2, int pwmResolution = 8, int pwmFreq = 200, int initSpeed = 0);
 
     // Setter methods
     void setSpeed(int newSpeed);
