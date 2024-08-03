@@ -1,0 +1,651 @@
+#include <Arduino.h>
+#include <ArduinoOTA.h>
+#include <WiFi.h>
+#include <ESP32Servo.h>
+#include <motor.h>
+
+const char* ssid = "nate1234";
+const char* password = "nate1234";
+
+//Motors
+const int pwmPinA1 = 38;
+const int pwmPinA2 = 37;
+const int pwmPinB1 = 36;
+const int pwmPinB2 = 35;
+
+const int pwmChannelA1 = 0;
+const int pwmChannelA2 = 1;
+const int pwmChannelB1 = 2;
+const int pwmChannelB2 = 3;
+const int lazyChannel = 4;
+const int clawArmChannel = 5;
+const int clawChannel = 6;
+const int cupChannel = 7;
+
+
+
+//Servos
+const int lazy = 9;
+const int clawArm = 10;
+const int claw = 11;
+const int cupArm = 12;
+const int cup = 13;
+
+
+const int pwmResolution = 10;
+const int motorResolution = 8;
+const int maxDuty = pow(2,10) - 1;
+const int motorFreq = 500;
+const int servoFreq = 50;
+
+//BACK
+const int backR = 1;
+const int backL = 2;
+
+//RIGHT
+const int rightF = 3;
+const int rightB = 4;
+
+//LEFT
+const int leftF = 5;
+const int leftB = 6;
+
+//FRONT
+const int frontR = 7; 
+const int frontL = 8; 
+
+//const int wifiLEDPin = 16;
+
+//----Claw------
+
+
+const int clawArmDown = 80;
+const int clawArmUp = 60;
+const int clawArmNeutral = 73;
+const int clawOpen = 75;
+const int clawClosed = 57;
+const int clawPlate = 64;
+const int cupArmIn = 30;
+const int cupArmOut = 80;
+const int cupOpen = 60;
+const int cupClosed = 90;
+
+//-----------------Steering--------------
+//----Values-----
+int FRval = 0;
+int FLval = 0;
+int BRval = 0;
+int BLval = 0;
+int FRvalOld = 0;
+int FLvalOld = 0;
+int BRvalOld = 0;
+int BLvalOld = 0;
+
+int default_speed = 235;
+int direction = 1;
+int lost_correction = 30; //How much duty cycle to add/subtract from wheels when steering for line following
+int offset = 55; //
+int tot_error = 0;
+
+//----Offsets----
+//Error Values
+int proportional_error = 0;
+
+
+//PID coefficients
+double KP = 0.02; //porportional
+double KD = 0.0;
+double KI = 0.0;
+int min_error = 1000;
+int totalError = 0;
+int prevError = 0;
+//Thresholds
+
+int lost_threshold = 500;
+int line_threshold = 2000;
+//
+bool seenRightF = false;
+bool seenRightB = false;
+bool seenLeftF = false;
+bool seenLeftB = false;
+bool seenWhite = false;
+
+int stations_left = 0;
+int slow_speed = 85;
+
+unsigned long starting_time;
+long max_duration;
+int servo_delay = 2;
+//------------
+Motor motorA (pwmPinA1, pwmPinA2, pwmChannelA1, pwmChannelA2);
+Motor motorB (pwmPinB1, pwmPinB2, pwmChannelB1, pwmChannelB2);
+
+
+void drive(bool forward, bool right, int stations);
+void align(bool right, bool forward);
+bool checkIfSeen(bool right, bool both, bool forward = false);
+void grabFood();
+void backtrack(bool forward);
+//void updateLineFollowing(bool forward);
+void follow(int direction);
+void follow_forward();
+void follow_backward();
+void check_pos();
+void moveServo(int channel, int target, int current, int time);
+void tristanDrive();
+void grabPlate();
+void burger();
+
+//void tristanfollow(int direction);
+
+enum position{
+  LEFT,
+  RIGHT,
+  STRAIGHT,
+  LOSTRIGHT,
+  LOSTLEFT
+};
+position fPos = STRAIGHT;
+position bPos = STRAIGHT;
+
+int state = 1;
+bool forward = true;
+bool right = true;
+
+void setup() {
+  ledcSetup(4, servoFreq, pwmResolution);
+  ledcSetup(5, servoFreq, pwmResolution);
+  ledcSetup(6, servoFreq, pwmResolution);
+  ledcSetup(7, servoFreq, pwmResolution);
+
+  ledcAttachPin(lazy, lazyChannel);
+  ledcAttachPin(clawArm, clawArmChannel);
+  ledcAttachPin(claw, clawChannel);
+  ledcAttachPin(cupArm, cupChannel);
+
+  Serial.begin(115200);
+
+  if(state == 0){
+    KP = 0.004;
+    default_speed = 65;
+  int startTime = millis();
+  int currentTime = millis();
+  while(currentTime - startTime < 2000){
+    currentTime = millis();
+    follow_backward();
+  }
+  motorA.setSpeed(0);
+  motorB.setSpeed(0);
+
+  }
+  else if(state == 1){
+    ledcDetachPin(cupArm);
+    ledcAttachPin(cup, cupChannel);
+    ledcWrite(cupChannel, 0);
+  
+  }
+}
+void loop(){
+  while(Serial.available())
+  {
+    String in_char = Serial.readStringUntil('\n');
+    int dutyCycle = in_char.toInt();
+    Serial.println(dutyCycle);
+ledcWrite(cupChannel, dutyCycle);
+delay(10);
+  }
+  } 
+
+
+void drive(bool forward, bool right, int stations){
+  int count = stations;
+  bool seen = false;
+  if(forward){
+    direction = 1;
+  } else{
+    direction = -1;
+  }
+    motorA.setSpeed(default_speed * direction);
+    motorB.setSpeed(default_speed * direction);
+
+    seen = checkIfSeen(right, false); //to get rid of the first possible line which should not count
+    Serial.println("initial check");
+    Serial.println(seen);
+    while (seen){
+      seen = checkIfSeen(right, false);
+      follow(direction);
+      Serial.println("black start");
+      Serial.println(seen);
+      Serial.println(analogRead(rightF));
+      Serial.println(analogRead(leftF));
+    }
+
+    while (true){
+      Serial.println("in white");
+      bool seen = checkIfSeen(right, false);
+      Serial.print(seen);
+      if (seen){
+        count--;
+        if (count == 0){
+          break;
+        }
+      }
+      while (seen){ //if on black line just keep going straight don't update count
+        seen = checkIfSeen(right, false);
+        follow(direction);
+        }
+      follow(direction);
+    }
+    backtrack(forward);
+    delay(500);
+    align(right, forward);
+  }
+  void align(bool right, bool forward){
+    default_speed = slow_speed;
+    KP = 0.01;
+    offset = 25;
+    if(forward){
+      while(!checkIfSeen(right, false)){
+        follow(-1);
+        }
+    }else{
+      while(!checkIfSeen(right, false)){
+        follow(1);
+        }
+    }
+    motorA.setSpeed(0);
+    motorB.setSpeed(0);
+    default_speed = 235;
+    KP = 0.02;
+    offset = 55;
+  }
+
+
+  void backtrack(bool forward){
+    if(forward){
+      motorA.setSpeed(0);
+      motorB.setSpeed(0);
+      delay(500);
+      if (analogRead(backR) > line_threshold && analogRead(backL) > line_threshold){
+        //do nothing
+      }
+      else if(analogRead(backR) > analogRead(backL)){
+        motorA.setSpeed(slow_speed);
+        motorB.setSpeed(slow_speed*-1);
+        int startTime = millis();
+        while(analogRead(backR) < line_threshold || analogRead(backL) < line_threshold){
+          if(millis()-startTime > 250){ // other way if no match in 0.25 s
+            break;
+          }
+        }
+        motorA.setSpeed(slow_speed*-1);
+        motorB.setSpeed(slow_speed);
+        while(analogRead(backR) < line_threshold || analogRead(backL) < line_threshold){
+          //do nothing
+        }
+
+      }else {
+        motorA.setSpeed(slow_speed*-1);
+        motorB.setSpeed(slow_speed);
+        int startTime = millis();
+        while(analogRead(backR) < line_threshold || analogRead(backL) < line_threshold){
+          if(millis()-startTime > 250){
+            break;
+          }
+        }
+        motorA.setSpeed(slow_speed);
+        motorB.setSpeed(slow_speed*-1);
+        while(analogRead(backR) < line_threshold || analogRead(backL) < line_threshold){
+          //do nothing
+        }
+      }
+      motorA.setSpeed(0);
+      motorB.setSpeed(0);
+    }else{
+      motorA.setSpeed(0);
+      motorB.setSpeed(0);
+      delay(500);
+      if (analogRead(frontR) > line_threshold || analogRead(frontL) > line_threshold){
+        //do nothing
+      }
+      else if(analogRead(frontR) > analogRead(frontL)){
+        motorA.setSpeed(-45);
+        motorB.setSpeed(45);
+        int startTime = millis();
+        while(analogRead(frontR) < line_threshold || analogRead(frontL) < line_threshold){
+          if(millis()-startTime > 200){ // other way if no match in 0.25 s
+            break;
+          }
+        }
+        motorA.setSpeed(45);
+        motorB.setSpeed(-45);
+        while(analogRead(frontR) < line_threshold || analogRead(frontL) < line_threshold){
+          //do nothing
+        }
+
+      }else {
+        motorA.setSpeed(45);
+        motorB.setSpeed(-45);
+        int startTime = millis();
+        while(analogRead(frontR) < line_threshold || analogRead(frontL) < line_threshold){
+          if(millis()-startTime > 200){
+            break;
+          }
+        }
+        motorA.setSpeed(-55);
+        motorB.setSpeed(55);
+        while(analogRead(frontR) < line_threshold || analogRead(frontL) < line_threshold){
+          //do nothing
+        }
+      }
+      motorA.setSpeed(0);
+      motorB.setSpeed(0);
+    }
+  }
+
+
+  bool checkIfSeen(bool right, bool both, bool forward){
+    if (right){
+      if (both){
+        return (analogRead(rightF) > line_threshold || analogRead(rightB) > line_threshold);
+        
+      } else {
+        if (forward){
+          return (analogRead(rightF) > line_threshold);
+        }
+        return (analogRead(rightB) > line_threshold);
+      }
+    }
+    if (both){
+        return (analogRead(leftF) > line_threshold && analogRead(leftB) > line_threshold);
+      } else {
+        if (forward){
+          return (analogRead(leftF) > line_threshold);
+        }
+        return (analogRead(leftB) > line_threshold);
+      }
+  }
+
+
+
+void follow_forward() {
+      FRval= analogRead(frontR); 
+      FLval = analogRead(frontL);
+      BRval = analogRead(backR);
+      BLval = analogRead(backL);
+      check_pos();
+          //THis is if we are off line in front
+          if(fPos == LOSTLEFT){ 
+              motorA.setSpeed(default_speed*direction - offset);
+              motorB.setSpeed(default_speed*direction + offset);
+          }
+            else if(fPos == LOSTRIGHT){
+              motorA.setSpeed(default_speed*direction + offset);
+              motorB.setSpeed(default_speed*direction - offset);
+            }
+
+          else if(fPos == RIGHT || fPos == LEFT){
+            int error = FRval - FLval;
+            double P = KP * (error);
+            motorA.setSpeed(constrain(default_speed * (direction) - round(P),  -245, 245));
+            motorB.setSpeed(constrain(default_speed * (direction) + round(P), -245, 245));
+          }
+        }
+
+
+void follow_backward(){
+      FRval= analogRead(frontR); 
+      FLval = analogRead(frontL);
+      BRval = analogRead(backR);
+      BLval = analogRead(backL);
+      check_pos();
+      if(bPos == LOSTLEFT){
+          motorA.setSpeed(default_speed*direction + offset);
+          motorB.setSpeed(default_speed*direction - offset);
+        }
+      else if(LOSTRIGHT){
+          motorA.setSpeed(default_speed*direction - offset);
+          motorB.setSpeed(default_speed*direction + offset);
+          }
+
+      else if(bPos == RIGHT || bPos == LEFT){
+            int error = BLval - BRval;
+            double P = KP * (error);
+            motorA.setSpeed(constrain(default_speed * (direction) - round(P),  -245, 245));
+            motorB.setSpeed(constrain(default_speed * (direction) + round(P), -245, 245));
+          }
+        }
+
+
+void check_pos(){
+
+  //** Case For the back
+
+  //Case when back is Straight
+  if(bPos == STRAIGHT){
+    if(analogRead(backR) < line_threshold && analogRead(backL) >= line_threshold){
+      bPos = RIGHT;
+    }
+    else if(analogRead(backL) < line_threshold && analogRead(backR) >= line_threshold){
+      bPos = LEFT;
+    }
+    else if(analogRead(backR) >= line_threshold && analogRead(backL) >= line_threshold){
+      bPos = STRAIGHT;
+    }
+    else{
+      digitalWrite(LED_BUILTIN, 0);
+    }
+  }
+  //Right of line case
+  else if(bPos == RIGHT){
+    if(analogRead(backR) >= line_threshold && analogRead(backL) >= line_threshold){
+      bPos = STRAIGHT;
+    }
+    else if(analogRead(backR) < line_threshold && analogRead(backL) < line_threshold){
+      bPos = LOSTRIGHT;
+    }
+  }
+  //Left of line case
+  else if(bPos == LEFT){
+    if(analogRead(backR) >= line_threshold && analogRead(backL) >= line_threshold){
+      bPos = STRAIGHT;
+    }
+    else if(analogRead(backR) < line_threshold && analogRead(backL) < line_threshold){
+      bPos = LOSTLEFT;
+    }
+  }
+
+
+  else if(BRval >= line_threshold && BLval >= line_threshold){
+    bPos = STRAIGHT;
+  }
+
+  //**Case for going front
+
+  //Case when back is Straight
+  if(fPos == STRAIGHT){
+    if(analogRead(frontR) < line_threshold && analogRead(frontL) >= line_threshold){
+      fPos = RIGHT;
+    }
+    else if(analogRead(frontL) < line_threshold && analogRead(frontR) >= line_threshold){
+      fPos = LEFT;
+    }
+    else if(analogRead(frontR) >= line_threshold && analogRead(frontL) >= line_threshold){
+      fPos = STRAIGHT;
+    }
+    else{
+      digitalWrite(LED_BUILTIN, 0);
+    }
+  }
+  else if(fPos == RIGHT){
+    if(analogRead(frontR) >= line_threshold && analogRead(frontL) >= line_threshold){
+      fPos = STRAIGHT;
+    }
+    else if(analogRead(frontR) < line_threshold && analogRead(frontL) < line_threshold){
+      fPos = LOSTRIGHT;
+    }
+  }
+  else if(fPos == LEFT){
+    if(analogRead(frontR) >= line_threshold && analogRead(frontL) >= line_threshold){
+      fPos = STRAIGHT;
+    }
+    else if(analogRead(frontR) < line_threshold && analogRead(frontL) < line_threshold){
+      fPos = LOSTLEFT;
+    }
+  }
+
+  }
+
+  void follow(int direction) {
+      FRval= analogRead(frontR); 
+      FLval = analogRead(frontL);
+      BRval = analogRead(backR);
+      BLval = analogRead(backL);
+        //Forwards case 
+        if (direction > 0){
+          //THis is if we are off line in front
+          if(FRval < 2000 && FLval < 2000){ 
+            if(FRvalOld >= 2000){
+              motorA.setSpeed(default_speed*direction - offset);
+              motorB.setSpeed(default_speed*direction + offset);
+            }
+            else if(FLvalOld >= 2000){
+              motorA.setSpeed(default_speed*direction + offset);
+              motorB.setSpeed(default_speed*direction - offset);
+            }
+          }
+          else{
+            int error = FRval - FLval;
+            double P = KP * (error);
+            motorA.setSpeed(constrain(default_speed * (direction) - round(P),  -245, 245));
+            motorB.setSpeed(constrain(default_speed * (direction) + round(P), -245, 245));
+          }
+        }
+        //backwards case
+        else{
+          //THis is if we are off line in back
+          if(BRval < 2000 && BLval < 2000){ 
+            if(BRvalOld >= 2000){
+              motorA.setSpeed(default_speed*direction + offset);
+              motorB.setSpeed(default_speed*direction - offset);
+            }
+            else if(BLvalOld >= 2000){
+              motorA.setSpeed(default_speed*direction - offset);
+              motorB.setSpeed(default_speed*direction + offset);
+            }
+          }
+          else{
+            int error = BLval - BRval;
+            double P = KP * (error);
+            motorA.setSpeed(constrain(default_speed * (direction) - round(P),  -245, 245));
+            motorB.setSpeed(constrain(default_speed * (direction) + round(P), -245, 245));
+          }
+        }
+        FRvalOld = FRval;
+        FLvalOld = FLval;
+        BRvalOld = BRval;
+        BLvalOld = BLval;
+    }
+    void tristanDrive(){
+      int startTime = millis();
+  int currentTime = millis();
+  while(currentTime - startTime < 2000){
+    currentTime = millis();
+    follow(-1);
+  }
+backtrack(0);
+delay(500);
+  int startTime1 = millis(); // good
+  int currentTime1 = millis();
+  while(currentTime1 - startTime1 < 2000){
+    currentTime1 = millis();
+    follow(1);
+  }
+  backtrack(1);
+  delay(500);
+    }
+
+void grabFood(){
+  //ledcWrite(clawArmChannel, 80);
+  moveServo(clawArmChannel, clawArmDown, clawArmUp, 40);// lower claw
+  delay(500);
+  moveServo(clawChannel, clawClosed, clawOpen, 25); //close claw
+  //ledcWrite(clawChannel, 57);
+  delay(500);
+  moveServo(clawArmChannel, clawArmUp, clawArmDown, 20); //raise claw
+  //ledcWrite(clawArmChannel, 60);
+  delay(1000);
+  moveServo(clawChannel, clawOpen, clawClosed,25);//open claw
+  //ledcWrite(clawChannel, 73);
+  delay(500);
+}
+
+void moveServo(int channel, int target, int current, int time) {
+  if(target > current){
+    for(int i = current; i <= target; i++) {
+      ledcWrite(channel, i);
+      if(target - i < 10){
+        delay(time);
+      } else if (target - i < 20){
+        delay(10);
+      } else {
+        delay(1);
+      }
+    }
+  } else {
+    for (int i = current; i >= target; i--) {
+        ledcWrite(channel, i);
+        if(i-target < 10){
+          delay(25);
+        } else if (i-target < 20){
+          delay(10);
+        } else {
+          delay(1);
+        }
+    }
+  }
+}
+
+void grabPlate(){
+  //ledcWrite(clawArmChannel, 80);
+  moveServo(clawArmChannel, clawArmDown, clawArmUp, 40);// lower claw
+  delay(500);
+  moveServo(clawChannel, clawPlate, clawOpen,25); //close claw
+  //ledcWrite(clawChannel, 57);
+  delay(500);
+  moveServo(clawArmChannel, clawArmNeutral, clawArmDown, 25); //raise claw
+  //ledcWrite(clawArmChannel, 60);
+  delay(1000);
+}
+
+void burger(){
+  ledcWrite(clawArmChannel, clawArmUp);
+  ledcWrite(clawChannel, clawOpen);
+  drive(forward, !right, 2);
+  delay(500);
+  grabFood();// grab Bottom bun
+  drive(!forward, !right, 1);
+  delay(500);
+  grabFood(); // grab Tomato
+  drive(forward,!right,2);
+  grabFood(); //grab Patty
+  delay(500);
+  drive(!forward,!right,1);
+  grabFood(); // grab lettuce
+  delay(1000);
+  grabFood(); // grab top Bun
+  delay(500);
+  drive(forward,!right,1);
+  default_speed = 140;
+  drive(forward,!right,1);
+  grabPlate();
+  delay(500);
+  int t1 = millis();
+  int t2 = millis();
+  while(t2 - t1 < 2500){
+    t2 = millis();
+    follow(-1);
+  }
+  motorA.setSpeed(0);
+  motorB.setSpeed(0);
+}
