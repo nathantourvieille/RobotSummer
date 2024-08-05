@@ -15,21 +15,27 @@ Our strategy was to make the most burgers possible in 2 minutes. Our first robot
 (Brianna)
 #### H Bridge
 Since premade H Bridges were not permitted, we made H Bridge PCBs.  
+
 <img src="https://github.com/user-attachments/assets/f49de4b8-fa06-483f-acd4-e2d75fc72247" alt="IMG_0039" width="300">
 
 #### IR Beacon Detection PCBs
+
 <img src="https://github.com/user-attachments/assets/d81d688a-c8bc-42c8-bca0-25481b5ce81f" alt="IMG_0043" width="300">
-This V2 IR Sensing PCB has a bandpass filter and a peak detect circuit to filter out irrelevant IR frequencies. This was added because we decided that writing cross-correlation software was a less interesting solution. On our robot, we have 2 IR phototransistors angled 45 degrees away from each other. When approaching the serving area, we compare the amplitudes of the signals from the left and right phototransistor and approach the direction with highest amplitude signal.
+
+This V2 IR Sensing PCB has a bandpass filter and a peak detect circuit to filter out irrelevant IR frequencies. This was added because we decided that writing cross-correlation software was a less interesting solution. On our robot, we have 2 IR phototransistors angled 45 degrees away from each other. When approaching the serving area, we compare the amplitudes of the signals from the left and right phototransistors and approach the direction with the highest amplitude signal.
 
 <img src="https://github.com/user-attachments/assets/2cbc61e7-e693-4115-9b50-94a7f64ad115" alt="FullSizeRender" width="300">
+
+#### Tape Following PCB
+JST connectors were used so that faulty TCRTs could be easily swapped out. 
+
+<img src="https://github.com/user-attachments/assets/88dda804-2ab3-4c72-81c2-b679db210f3b" alt="IMG_8871" width="300">
 
 #### Power
 
 #### Mechanical Design
 
-#### Tape Following PCB
-JST connectors were used so that faulty TCRTs could be easily swapped out. 
-<img src="https://github.com/user-attachments/assets/88dda804-2ab3-4c72-81c2-b679db210f3b" alt="IMG_8871" width="300">
+
 
 
 
