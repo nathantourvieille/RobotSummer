@@ -1,5 +1,7 @@
 # Robot Summer: ENPH253
 
+https://github.com/user-attachments/assets/18f15da9-de99-401d-88bf-35fbc578c600
+
 Team Members: Brianna Gopaul, Ella Yan, Tristan Brown, Nathan Tourveille 
 
 ## Competition Outline
@@ -11,18 +13,15 @@ In 6 weeks, we were tasked to build 2 autonomous robots that can play the game O
 
 Our strategy was to make the most burgers possible in 2 minutes. Our first robot is located on the top region of the competition surface. It's designed to pick up ingredients and place them on the cooking surface for the second robot to pick up. The second robot picks up ingredients and stacks them in a chute. This chute vertically aligns the ingredients to make burgers. Once all the ingredients have been placed in the chute, the robot dispenses the ingredients on a plate. 
 
-[![Competition Run](https://img.youtube.com/vi/iM0Je9Kw5zo/0.jpg)](https://youtu.be/iM0Je9Kw5zo)
-
-
 #### PCBs
 
-<img src="https://github.com/user-attachments/assets/f49de4b8-fa06-483f-acd4-e2d75fc72247" alt="IMG_0039" width="300">
+<img src="https://github.com/user-attachments/assets/f49de4b8-fa06-483f-acd4-e2d75fc72247" alt="IMG_0039" width="300"> </br>
 
 
-<img src="https://github.com/user-attachments/assets/d81d688a-c8bc-42c8-bca0-25481b5ce81f" alt="IMG_0043" width="300">
+<img src="https://github.com/user-attachments/assets/d81d688a-c8bc-42c8-bca0-25481b5ce81f" alt="IMG_0043" width="300"> </br>
 
 
-<img src="https://github.com/user-attachments/assets/2cbc61e7-e693-4115-9b50-94a7f64ad115" alt="FullSizeRender" width="300">
+<img src="https://github.com/user-attachments/assets/2cbc61e7-e693-4115-9b50-94a7f64ad115" alt="FullSizeRender" width="300"> </br>
 
 
 <img src="https://github.com/user-attachments/assets/88dda804-2ab3-4c72-81c2-b679db210f3b" alt="IMG_8871" width="300">
