@@ -26,8 +26,24 @@ Our strategy was to make the most burgers possible in 2 minutes. Our first robot
 
 <img src="https://github.com/user-attachments/assets/88dda804-2ab3-4c72-81c2-b679db210f3b" alt="IMG_8871" width="300">
 
+##Mechanical Design
 
+###Claw Design
+Both claws were designed to scoop the food from underneath. To do this we used thin plastic on the lips of the claw which enabled the claw to fully be in contact with the ground even if we are not flush with the ground. After grabbing the food, the claw would rotate back and the food would slide down into the cup dropping mechanism
 
+##Cup Design
+Once the burger is assembled in the cup, a servo would move the cup over the plate and another servo would open the bottom of the cup and the burger would drop.
+
+##⁠Software
+
+###Line Following
+A decent bit of software was related to the TCRT readings. We used a proportional constant to line follow and we would use the side TCRTs to detect when we were at stations. From there we then backtrack if we ever overshot and we would have aligning software if the robot was ever not parallel with the black line.
+
+###Servos
+Another bit of software was writing all the functions where the servos would be actuated. For example we had a grabFood and grabPLate function and many more. Combining these functions with the line detection software was essentially the essence of the code.
+
+###Communication
+Lastly, the robots communicated via ESP now. This way they were able to coordinate when to grab and drop food with the claws hitting each other.
 
 
 
